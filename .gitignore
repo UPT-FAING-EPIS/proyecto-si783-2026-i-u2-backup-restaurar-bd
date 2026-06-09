@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════════════
+# SafeBridge — .gitignore
+# ═══════════════════════════════════════════════════
+
+# ── Dependencies ──────────────────────────────────
+node_modules/
+
+# ── Build output ──────────────────────────────────
+dist/
+dist-ssr/
+build/
+
+# ── Rust / Tauri ──────────────────────────────────
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# ── Sidecar binaries (large EXEs, each dev downloads their own) ─
+src-tauri/binaries/*.exe
+
+# ── Native DLL dependencies for pg_dump ───────────
+src-tauri/resources/pg_deps/
+
+# ── Temp downloads (tool install cache) ───────────
+src-tauri/temp_downloads/
+
+# ── Portable / installer artifacts ────────────────
+SafeBridge-Portable/
+SafeBridge-Portable.zip
+create_portable.ps1
+
+# ── SQLite databases (runtime data) ───────────────
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ── Logs ──────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── Environment variables ─────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Editor / IDE ──────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── OS metadata ───────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.local
+
+# ── Package lock (optional — keep if you want reproducible builds) ─
+# package-lock.json
+# Cargo.lock  ← keep for binaries, per Cargo docs
