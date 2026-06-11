@@ -20,15 +20,13 @@ Este repositorio se divide en tres ejes principales, estructurados de la siguien
 ## 1. 📖 Informes y Documentación de Ingeniería
 Todos los artefactos de software, análisis e ingeniería inversa se encuentran disponibles en la carpeta [`./Informes`](./Informes). Estos documentos cumplen exhaustivamente con los requisitos de la rúbrica:
 
-- **[FD01 - Informe de Factibilidad](./Informes/FD01-Informe-Factibilidad.md):** Contiene el análisis económico detallado y la proyección de costos de infraestructura en la nube manejada con **Terraform**.
-- **[FD02 - Informe de Visión](./Informes/FD02-Informe-Vision.md):** Describe las características del producto, funciona como base para la [Wiki del Repositorio](./Wiki) e incluye el **Roadmap de 3 versiones** (V1.0, V2.0, V3.0).
-- **[FD03 - Especificación de Requerimientos](./Informes/FD03-Informe%20Especificación%20Requerimientos.md):** Define las Historias de Usuario (formato *Como... Quiero... Para...*), Criterios de Aceptación y **18 Escenarios de Prueba en formato BDD** (*Dado... Cuando... Entonces*).
-- **[FD04 - Arquitectura de Software](./Informes/FD04-Informe-Arquitectura-de-Software.md):** Incluye todos los diagramas de ingeniería inversa generados desde el código (Clases, Componentes, Despliegue, Arquitectura e Infraestructura) así como el **Diagrama de Casos de Uso** y **Diagramas de Secuencia**.
-- **[FD05 - Documentación y Manual](./Informes/FD05-Informe-Proyecto.md):** Simula una salida técnica de `DocFX` documentando la API interna de Rust y provee el **Manual de Usuario** guiado por trazas visuales de UI.
-- **[Diccionario de Datos](./Informes/Diccionario-de-Datos.md):** Documentación exhaustiva del modelo relacional implementado en la base local de SQLite (`connections`, `backup_logs`).
-- **[Estándar de Programación](./Informes/Estandar-de-Programacion.md):** Reglas, buenas prácticas y convenciones adoptadas para Rust, React, y Commits de Git.
-
-> **💡 Nota sobre GitHub Projects:** Para facilitar la trazabilidad en GitHub, puedes encontrar las tareas en formato Markdown listas para pegar como Issues en [Github-Issues.md](./Github-Issues.md).
+- **[FD01 - Informe de Factibilidad](./FD01-Informe-Factibilidad.md):** Contiene el análisis económico detallado y la proyección de costos de infraestructura en la nube manejada con **Terraform**.
+- **[FD02 - Informe de Visión](./FD02-Informe-Vision.md):** Describe las características del producto, funciona como base para la [Wiki del Repositorio](./Wiki) e incluye el **Roadmap de 3 versiones** (V1.0, V2.0, V3.0).
+- **[FD03 - Especificación de Requerimientos](./FD03-Informe%20Especificación%20Requerimientos.md):** Define las Historias de Usuario (formato *Como... Quiero... Para...*), Criterios de Aceptación y **18 Escenarios de Prueba en formato BDD** (*Dado... Cuando... Entonces*).
+- **[FD04 - Arquitectura de Software](./FD04-Informe-Arquitectura-de-Software.md):** Incluye todos los diagramas de ingeniería inversa generados desde el código (Clases, Componentes, Despliegue, Arquitectura e Infraestructura) así como el **Diagrama de Casos de Uso** y **Diagramas de Secuencia**.
+- **[FD05 - Documentación y Manual](./FD05-Informe-Proyecto.md):** Simula una salida técnica de `DocFX` documentando la API interna de Rust y provee el **Manual de Usuario** guiado por trazas visuales de UI.
+- **[Diccionario de Datos](./Diccionario-de-Datos.md):** Documentación exhaustiva del modelo relacional implementado en la base local de SQLite (`connections`, `backup_logs`).
+- **[Estándar de Programación](./Estandar-de-Programacion.md):** Reglas, buenas prácticas y convenciones adoptadas para Rust, React, y Commits de Git.
 
 ---
 
@@ -70,4 +68,4 @@ Un microservicio complementario **Headless** construido en Rust utilizando el fr
 
 ---
 
-*Proyecto desarrollado y verificado en 2026. Universidad Privada de Tacna.*
+*Proyecto desarrollado y verificado en 2026. Iker Sierra-Samuel Cortez*
