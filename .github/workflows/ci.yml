@@ -1,0 +1,63 @@
+name: CI - Static Tests & Coverage
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test_and_coverage:
+    name: Build, Test & Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants
+
+      - name: Run Tests (BDD + Unit)
+        run: cargo test --all-features
+
+      - name: Generate Coverage Report
+        run: cargo tarpaulin --out Html --output-dir ./coverage-report
+
+      - name: Run Mutation Tests
+        run: cargo mutants -vV --in-place || true # Evitar falla total si hay mutantes sobrevivientes por ahora
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          generateSarif: "1"
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/rust@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+        continue-on-error: true # Continua en caso no se tenga token al inicio
+
+      - name: Gather Reports for GH Pages
+        run: |
+          mkdir -p public
+          cp -r ./coverage-report/* public/
+          cp -r mutants.out public/mutants || true
+          echo "<html><body><h1>Safebridge Reports</h1><ul><li><a href='tarpaulin-report.html'>Coverage Report</a></li><li><a href='mutants/'>Mutation Report</a></li></ul></body></html>" > public/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public

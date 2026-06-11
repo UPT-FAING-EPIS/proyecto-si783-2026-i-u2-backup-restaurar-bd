@@ -44,3 +44,48 @@ pub fn decrypt_password(encrypted: &str) -> Result<String, String> {
         
     String::from_utf8(decrypted).map_err(|e| format!("UTF8 error: {:?}", e))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encrypt_decrypt_password_success() {
+        // Dado un password en texto plano
+        let original_password = "MySuperSecretPassword123!";
+        
+        // Cuando encriptamos el password
+        let encrypted = encrypt_password(original_password).unwrap();
+        
+        // Entonces el resultado encriptado no debe ser igual al original y debe ser desencriptable
+        assert_ne!(encrypted, original_password);
+        
+        let decrypted = decrypt_password(&encrypted).unwrap();
+        assert_eq!(decrypted, original_password);
+    }
+
+    #[test]
+    fn test_decrypt_invalid_ciphertext_length() {
+        // Dado un texto cifrado inválido (muy corto)
+        let invalid_encrypted = "short";
+        
+        // Cuando intentamos desencriptarlo
+        let result = decrypt_password(invalid_encrypted);
+        
+        // Entonces debe retornar un error
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decrypt_invalid_base64() {
+        // Dado un texto que no es base64 válido
+        let invalid_base64 = "!!invalid_base64!!";
+        
+        // Cuando intentamos desencriptarlo
+        let result = decrypt_password(invalid_base64);
+        
+        // Entonces debe retornar un error de base64 decode
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Base64 decode error"));
+    }
+}

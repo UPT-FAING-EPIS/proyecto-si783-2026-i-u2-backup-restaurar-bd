@@ -71,3 +71,41 @@ pub fn init_db(data_dir: &PathBuf) -> Result<Connection> {
 
     Ok(conn)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_init_db_creates_tables() {
+        // Dado un directorio temporal
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().to_path_buf();
+        
+        // Cuando inicializamos la base de datos
+        let conn = init_db(&db_path).expect("Failed to init DB");
+        
+        // Entonces las tablas requeridas deben existir
+        let mut stmt = conn.prepare("SELECT name FROM sqlite_master WHERE type='table'").unwrap();
+        let tables: Vec<String> = stmt.query_map([], |row| row.get(0)).unwrap().map(|r| r.unwrap()).collect();
+        
+        assert!(tables.contains(&"connections".to_string()));
+        assert!(tables.contains(&"backup_logs".to_string()));
+        assert!(tables.contains(&"validation_tasks".to_string()));
+    }
+
+    #[test]
+    fn test_init_db_creates_data_directory_if_missing() {
+        // Dado un directorio que no existe
+        let dir = tempdir().unwrap();
+        let non_existent_dir = dir.path().join("subdir_that_does_not_exist");
+        
+        // Cuando inicializamos la DB
+        let _conn = init_db(&non_existent_dir).unwrap();
+        
+        // Entonces el directorio debe haber sido creado y el archivo también
+        assert!(non_existent_dir.exists());
+        assert!(non_existent_dir.join("safebridge.db").exists());
+    }
+}
