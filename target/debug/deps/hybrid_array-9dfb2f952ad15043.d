@@ -1,0 +1,11 @@
+D:\Codigos\Base de datos\Actualizacion\safebridge para API\target\debug\deps\hybrid_array-9dfb2f952ad15043.d: C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\lib.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\sizes.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\flatten.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\from_fn.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\iter.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\traits.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\../README.md
+
+D:\Codigos\Base de datos\Actualizacion\safebridge para API\target\debug\deps\libhybrid_array-9dfb2f952ad15043.rmeta: C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\lib.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\sizes.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\flatten.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\from_fn.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\iter.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\traits.rs C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\../README.md
+
+C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\lib.rs:
+C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\sizes.rs:
+C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\flatten.rs:
+C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\from_fn.rs:
+C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\iter.rs:
+C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\traits.rs:
+C:\Users\ID\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hybrid-array-0.4.12\src\../README.md:

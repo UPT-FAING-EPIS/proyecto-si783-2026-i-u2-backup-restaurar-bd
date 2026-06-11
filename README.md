@@ -64,14 +64,19 @@ Estado del servidor y disponibilidad de Docker.
 - **Rust** (con `cargo`)
 - **Docker** instalado y en ejecución
 
-## Ejecución
+## Ejecución (Docker)
 
 ```bash
-# Compilar y ejecutar
-cargo run
+# 1. Construir la imagen
+docker build -t safebridge-api .
+
+# 2. Ejecutar el contenedor (montando el socket de Docker)
+docker run -d --name safebridge_api -p 3000:3000 -v /var/run/docker.sock:/var/run/docker.sock safebridge-api
 
 # El servidor inicia en http://localhost:3000
 ```
+
+> Para más detalles sobre la instalación en un servidor VPS, consulta el archivo [INSTALACION.md](INSTALACION.md).
 
 ## Estructura del Proyecto
 
