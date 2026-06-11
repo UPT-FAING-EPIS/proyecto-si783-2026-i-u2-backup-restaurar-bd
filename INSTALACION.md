@@ -45,8 +45,11 @@ sudo docker run -d \
   --restart always \
   -p 3000:3000 \
   -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /tmp:/tmp \
   safebridge-api
 ```
+
+> **¡IMPORTANTE!** El volumen `-v /tmp:/tmp` es estrictamente necesario porque la API recibe los archivos por HTTP, los guarda temporalmente en su carpeta `/tmp`, y luego le pide a Docker que se los pase al Sandbox. Al compartir la carpeta `/tmp` entre el contenedor principal y el host, garantizamos que el archivo no se pierda en el proceso.
 
 ### Comandos Útiles
 

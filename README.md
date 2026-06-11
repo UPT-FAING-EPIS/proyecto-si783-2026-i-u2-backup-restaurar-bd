@@ -4,51 +4,78 @@ SafeBridge API es un servicio backend **headless** (sin interfaz gráfica) const
 
 ## Endpoints
 
-### `POST /api/v1/validation/run`
-Recibe un backup o script, levanta un sandbox Docker de forma asíncrona, restaura los datos y ejecuta pruebas de integridad.
+### 1. Iniciar una Validación (Subir Archivo)
+**Endpoint:** `POST /api/v1/validation/run`
+**Rol:** Recibe tu archivo de base de datos directamente, crea el entorno aislado (sandbox), lo restaura y lo analiza. El archivo se guarda temporalmente en el servidor y se borra al finalizar.
+**Formato de entrada:** `multipart/form-data`
 
-**Request:**
-```json
-{
-  "backup_path": "C:/backups/mi_backup.sql",
-  "engine": "postgres",
-  "database_name": "mi_empresa_db"
-}
-```
+**Campos del Formulario (Request):**
+- `engine` (Texto): El motor de base de datos. Valores soportados: `mysql`, `postgres`, `sqlserver`, `mongodb`.
+- `database_name` (Texto, Opcional): El nombre de la base de datos si lo requiere el motor.
+- `file` (Archivo): El archivo `.sql` o `.bak` de tu backup.
 
 **Response (202 Accepted):**
 ```json
 {
   "task_id": "uuid-generado",
   "status": "queued",
-  "message": "Validación iniciada en segundo plano."
+  "message": "Validación iniciada en segundo plano. Consulte el estado con GET /api/v1/validation/{task_id}/report"
 }
 ```
 
-### `GET /api/v1/validation/{id}/report`
-Devuelve el estado y reporte detallado de una tarea de validación.
+### 2. Consultar el Reporte de la Validación
+**Endpoint:** `GET /api/v1/validation/{id}/report`
+**Rol:** Devuelve el estado actual y el reporte detallado de una tarea de validación.
 
-**Response (200 OK):**
+**Response en Proceso (200 OK):**
+```json
+{
+  "task_id": "uuid-generado",
+  "status": "processing",
+  "progress": "Restaurando base de datos en contenedor temporal...",
+  "report": null
+}
+```
+
+**Response Finalizado (200 OK):**
 ```json
 {
   "task_id": "uuid-generado",
   "status": "completed",
+  "progress": "",
   "report": {
     "integrity_valid": true,
     "execution_time_seconds": 45,
     "tables_validated": 24,
     "warnings": [],
     "critical_errors": [],
-    "logs": ["..."]
+    "logs": [
+      "[15:30:10] Docker está disponible.",
+      "[15:30:15] Contenedor levantado exitosamente...",
+      "[15:30:42] Archivo temporal eliminado exitosamente."
+    ]
   }
 }
 ```
 
-### `GET /api/v1/validation/tasks`
-Lista todas las tareas de validación registradas.
+### 3. Historial de Todas las Tareas
+**Endpoint:** `GET /api/v1/validation/tasks`
+**Rol:** Lista todas las tareas de validación registradas, ordenadas de la más reciente a la más antigua.
 
-### `GET /health`
-Estado del servidor y disponibilidad de Docker.
+### 4. Revisar la Salud del Servidor
+**Endpoint:** `GET /health`
+**Rol:** Verifica el estado del servidor y la disponibilidad de Docker. Ideal para verificar la conexión antes de enviar un archivo.
+
+**Response (200 OK):**
+```json
+{
+  "status": "ok",
+  "service": "SafeBridge API",
+  "version": "1.0.0",
+  "docker_available": true,
+  "timestamp": "2026-06-11 15:25:00"
+}
+```
 
 ## Motores Soportados
 
