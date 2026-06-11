@@ -16,7 +16,7 @@ Este repositorio se divide en tres ejes principales, estructurados de la siguien
 ---
 
 ## 1. 📖 Informes y Documentación de Ingeniería
-Todos los artefactos de software, análisis e ingeniería inversa se encuentran disponibles en la carpeta [`./Informes`](./Informes). Estos documentos cumplen exhaustivamente con los requisitos de la rúbrica:
+Todos los artefactos de software, análisis e ingeniería inversa se encuentran disponibles en la rama main. Estos documentos cumplen exhaustivamente con los requisitos de la rúbrica:
 
 - **[FD01 - Informe de Factibilidad](./FD01-Informe-Factibilidad.md):** Contiene el análisis económico detallado y la proyección de costos de infraestructura en la nube manejada con **Terraform**.
 - **[FD02 - Informe de Visión](./FD02-Informe-Vision.md):** Describe las características del producto, funciona como base para la [Wiki del Repositorio](./Wiki) e incluye el **Roadmap de 3 versiones** (V1.0, V2.0, V3.0).
@@ -29,7 +29,7 @@ Todos los artefactos de software, análisis e ingeniería inversa se encuentran 
 ---
 
 ## 2. 🖥️ SafeBridge Core (Aplicación de Escritorio)
-**Ruta del código:** `../safebridge - copia`
+**Ruta del código:** En la rama Codigo
 
 Es el motor principal orquestador del lado del cliente. Desarrollado utilizando **Tauri v2**, combina la eficiencia de **Rust** para el backend del sistema operativo y **React (con TailwindCSS)** para ofrecer una interfaz gráfica de última generación.
 
@@ -42,7 +42,7 @@ Es el motor principal orquestador del lado del cliente. Desarrollado utilizando 
 ---
 
 ## 3. 🌐 SafeBridge API (Backend de Validación Docker)
-**Ruta del código:** `../safebridge para API`
+**Ruta del código:** En la rama api
 
 Un microservicio complementario **Headless** construido en Rust utilizando el framework web **Axum**. A diferencia del cliente de escritorio que usa validaciones heurísticas, esta API está diseñada para hospedarse en un VPS (ej. AWS, DigitalOcean) y realizar validaciones profundas.
 
