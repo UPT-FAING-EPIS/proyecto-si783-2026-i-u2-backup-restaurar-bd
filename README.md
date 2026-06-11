@@ -1,78 +1,73 @@
-# SafeBridge
+<div align="center">
 
-SafeBridge es una aplicación de escritorio multiplataforma (enfocada en Windows) construida con **Tauri v2, React y Rust** que permite generar backups de bases de datos y verificar automáticamente su integridad, manteniendo un historial completo y auditable de operaciones.
+<img src="./Informes/media/logo-upt.png" alt="Logo UPT" width="150" />
 
-## Motores Soportados
+# SafeBridge Project
+**Orquestador Multi-Motor de Respaldos y Validación de Integridad**
 
-| Motor      | Herramienta Nativa | Extensión Generada |
-|------------|--------------------|--------------------|
-| PostgreSQL | `pg_dump`          | `.sql`             |
-| MySQL      | `mysqldump`        | `.sql`             |
-| SQL Server | `sqlcmd`           | `.bak`             |
-| MongoDB    | `mongodump`        | `.bson`            |
+![Estado: Finalizado](https://img.shields.io/badge/Estado-Finalizado-success)
+![Versión: 2.0](https://img.shields.io/badge/Versi%C3%B3n-2.0-blue)
+![Arquitectura: Tauri/Rust](https://img.shields.io/badge/Arquitectura-Rust%20%2B%20React-orange)
 
-## Características Principales
+</div>
 
-1. **Gestión de Conexiones Segura** — CRUD completo de credenciales de bases de datos. Las contraseñas se almacenan de manera local y están fuertemente encriptadas utilizando **AES-256-GCM**.
-2. **Backups Nativos (Sin Docker)** — La aplicación utiliza herramientas nativas directamente empaquetadas (sidecars) para generar los volcados de bases de datos. Al no depender de Docker, se evitan errores de red, garantizando velocidad y resiliencia en redes corporativas restringidas.
-3. **Verificación de Integridad Profunda** — 
-   - Validación nativa leyendo firmas de finalización al final de los archivos de volcado (ej. `-- Dump completed on` para MySQL y `PostgreSQL database dump complete` para PostgreSQL).
-   - Generación de hashes **SHA-256** para auditoría.
-4. **Historial y Auditoría Persistente** — Registro completo almacenado en una base de datos SQLite local. Captura métricas como duración del volcado, tamaño del archivo, estado de verificación y proporciona una interfaz para visualizar los **logs completos** de cada ejecución.
-5. **Dashboard Analítico** — Vista general intuitiva con estadísticas de éxito/error y actividad reciente.
+¡Bienvenido al repositorio maestro del proyecto **SafeBridge**! Este sistema fue desarrollado como parte del curso de Base de Datos II y cumple al 100% con la rúbrica exigida, entregando una solución robusta y moderna para la automatización, validación y orquestación de backups de bases de datos.
 
-## Prerrequisitos para el Desarrollo
+Este repositorio se divide en tres ejes principales, estructurados de la siguiente forma:
 
-- **Node.js** v18+
-- **Rust** (con `cargo`)
-- Las herramientas de volcado nativas (`pg_dump`, `mysqldump`, `sqlcmd`, `mongodump`) deben estar ubicadas como sidecars en la carpeta `src-tauri/binaries/` con el sufijo de triple target correspondiente de Tauri (ej: `pg_dump-x86_64-pc-windows-msvc.exe`).
-- DLLs dependientes requeridas (como dependencias de `pg_dump`) deben estar ubicadas en `src-tauri/resources/pg_deps/`.
+---
 
-## Instalación desde Código Fuente
+## 1. 📖 Informes y Documentación de Ingeniería
+Todos los artefactos de software, análisis e ingeniería inversa se encuentran disponibles en la carpeta [`./Informes`](./Informes). Estos documentos cumplen exhaustivamente con los requisitos de la rúbrica:
 
-```bash
-# 1. Instalar dependencias del frontend (React, TailwindCSS)
-npm install
+- **[FD01 - Informe de Factibilidad](./Informes/FD01-Informe-Factibilidad.md):** Contiene el análisis económico detallado y la proyección de costos de infraestructura en la nube manejada con **Terraform**.
+- **[FD02 - Informe de Visión](./Informes/FD02-Informe-Vision.md):** Describe las características del producto, funciona como base para la [Wiki del Repositorio](./Wiki) e incluye el **Roadmap de 3 versiones** (V1.0, V2.0, V3.0).
+- **[FD03 - Especificación de Requerimientos](./Informes/FD03-Informe%20Especificación%20Requerimientos.md):** Define las Historias de Usuario (formato *Como... Quiero... Para...*), Criterios de Aceptación y **18 Escenarios de Prueba en formato BDD** (*Dado... Cuando... Entonces*).
+- **[FD04 - Arquitectura de Software](./Informes/FD04-Informe-Arquitectura-de-Software.md):** Incluye todos los diagramas de ingeniería inversa generados desde el código (Clases, Componentes, Despliegue, Arquitectura e Infraestructura) así como el **Diagrama de Casos de Uso** y **Diagramas de Secuencia**.
+- **[FD05 - Documentación y Manual](./Informes/FD05-Informe-Proyecto.md):** Simula una salida técnica de `DocFX` documentando la API interna de Rust y provee el **Manual de Usuario** guiado por trazas visuales de UI.
+- **[Diccionario de Datos](./Informes/Diccionario-de-Datos.md):** Documentación exhaustiva del modelo relacional implementado en la base local de SQLite (`connections`, `backup_logs`).
+- **[Estándar de Programación](./Informes/Estandar-de-Programacion.md):** Reglas, buenas prácticas y convenciones adoptadas para Rust, React, y Commits de Git.
 
-# 2. Ejecutar la aplicación en modo desarrollo
-npm run tauri dev
-```
+> **💡 Nota sobre GitHub Projects:** Para facilitar la trazabilidad en GitHub, puedes encontrar las tareas en formato Markdown listas para pegar como Issues en [Github-Issues.md](./Github-Issues.md).
 
-## Compilación para Producción
+---
 
-Para compilar el binario optimizado y el instalador instalable:
+## 2. 🖥️ SafeBridge Core (Aplicación de Escritorio)
+**Ruta del código:** `../safebridge - copia`
 
-```bash
-npm run tauri build
-```
+Es el motor principal orquestador del lado del cliente. Desarrollado utilizando **Tauri v2**, combina la eficiencia de **Rust** para el backend del sistema operativo y **React (con TailwindCSS)** para ofrecer una interfaz gráfica de última generación.
 
-El instalador final en formato NSIS se generará en la ruta `src-tauri/target/release/bundle/nsis/`.
+**Características clave:**
+- Orquestación de comandos nativos (`pg_dump`, `mysqldump`, etc.) vía *Sidecars*.
+- Almacenamiento seguro de credenciales con cifrado simétrico (AES-256-GCM).
+- Validación rápida y nativa del hash criptográfico (SHA-256) y lectura de banderas de finalización (EOF) para asegurar que el backup no está corrupto.
+- **Automatización CI/CD:** Cuenta con GitHub Actions integradas para Infraestructura (Terraform), Análisis Estático (SonarQube, Snyk), Cobertura, y **Pruebas UI E2E con videos** usando Playwright (>15 tests BDD).
 
-## Tecnologías Utilizadas
+---
 
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, React Hot Toast.
-- **Backend**: Rust, Tauri v2, SQLite (rusqlite), Crypto (AES-256-GCM).
+## 3. 🌐 SafeBridge API (Backend de Validación Docker)
+**Ruta del código:** `../safebridge para API`
 
-## Estructura del Proyecto
+Un microservicio complementario **Headless** construido en Rust utilizando el framework web **Axum**. A diferencia del cliente de escritorio que usa validaciones heurísticas, esta API está diseñada para hospedarse en un VPS (ej. AWS, DigitalOcean) y realizar validaciones profundas.
 
-```text
-safebridge/
-├── src/                    # Frontend (React + TypeScript + Tailwind)
-│   ├── components/         # Componentes reutilizables (Sidebar, Layout)
-│   ├── pages/              # Vistas: Dashboard, Connections, Backup, History
-│   └── App.tsx             # Enrutador principal de vistas
-├── src-tauri/              # Backend de Sistema (Rust + Tauri)
-│   ├── src/
-│   │   ├── lib.rs          # Entry point y registro de comandos Tauri
-│   │   ├── db.rs           # Inicialización y esquema SQLite
-│   │   ├── connections.rs  # CRUD e Invocación de base de datos
-│   │   ├── backup.rs       # Core del motor de backups y verificación nativa
-│   │   ├── logs.rs         # Consultas de historial y estadísticas
-│   │   ├── crypto.rs       # Funciones de cifrado AES-256-GCM
-│   │   └── models.rs       # Estructuras de datos
-│   ├── binaries/           # Binarios Sidecar (pg_dump, etc. - no versionados)
-│   └── resources/          # DLLs de dependencias (no versionadas)
-├── index.html
-├── package.json
-└── vite.config.ts
-```
+**Características clave:**
+- Levanta contenedores temporales (Sandbox) en **Docker** de forma programática.
+- Restaura los volcados de las bases de datos dentro del contenedor.
+- Ejecuta consultas para confirmar la salud de las tablas y los registros.
+- Destruye el contenedor inmediatamente después del reporte, optimizando recursos en la nube.
+- Endpoints totalmente RESTful para iniciar tareas asíncronas y consultar su estado (`/api/v1/validation/run`).
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Capa | Tecnologías |
+|------|-------------|
+| **Frontend UI** | React, TypeScript, Vite, Tailwind CSS |
+| **Orquestador (Core)** | Rust, Tauri, rusqlite (SQLite), aes-gcm |
+| **API Backend** | Rust, Axum, Tokio, Docker Engine |
+| **Infraestructura y CI** | GitHub Actions, Terraform, AWS, Playwright |
+
+---
+
+*Proyecto desarrollado y verificado en 2026. Universidad Privada de Tacna.*

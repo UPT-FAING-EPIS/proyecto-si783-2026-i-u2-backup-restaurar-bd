@@ -38,26 +38,154 @@ Versión *2.0*
 |:---:|:---|:---|:---|:---|:---|
 | Versión | Hecha por | Revisada por | Aprobada por | Fecha | Motivo |
 | 1.0 | IASR / JSCM | Ing. P. Cuadros | Ing. P. Cuadros | 20/04/2026 | Versión Original |
-| 2.0 | IASR / JSCM | Ing. P. Cuadros | Ing. P. Cuadros | 31/05/2026 | Actualización para Tauri/Rust Architecture |
+| 2.0 | IASR / JSCM | Ing. P. Cuadros | Ing. P. Cuadros | 11/06/2026 | Actualización para añadir Casos de Uso y Diagramas de Secuencia |
 
 <div style="page-break-after: always; visibility: hidden"></div>
 
 # ÍNDICE GENERAL
 
-- [1. Diagrama de Clases / Estructuras](#1-diagrama-de-clases--estructuras)
-- [2. Diagrama de Base de Datos](#2-diagrama-de-base-de-datos)
-- [3. Diagrama de Componentes](#3-diagrama-de-componentes)
-- [4. Diagrama de Despliegue](#4-diagrama-de-despliegue)
-- [5. Diagrama de Arquitectura](#5-diagrama-de-arquitectura)
-- [6. Diagrama de Infraestructura (Terraform Cloud)](#6-diagrama-de-infraestructura-terraform-cloud)
+- [1. Diagrama de Casos de Uso](#1-diagrama-de-casos-de-uso)
+- [2. Diagramas de Secuencia](#2-diagramas-de-secuencia)
+- [3. Diagrama de Clases / Estructuras](#3-diagrama-de-clases--estructuras)
+- [4. Diagrama de Base de Datos](#4-diagrama-de-base-de-datos)
+- [5. Diagrama de Componentes](#5-diagrama-de-componentes)
+- [6. Diagrama de Despliegue](#6-diagrama-de-despliegue)
+- [7. Diagrama de Arquitectura](#7-diagrama-de-arquitectura)
+- [8. Diagrama de Infraestructura (Terraform Cloud)](#8-diagrama-de-infraestructura-terraform-cloud)
 
 <div style="page-break-after: always; visibility: hidden"></div>
 
-> **Nota metodológica**: Todos los diagramas de este documento han sido generados mediante **ingeniería inversa** del código fuente del repositorio `safebridge`. Los elementos representados corresponden exclusivamente a las estructuras en Rust (`src-tauri/src`) y TypeScript (`src/`) presentes en el código real.
+> **Nota metodológica**: Todos los diagramas de este documento han sido elaborados en base a las Historias de Usuario (Casos de Uso y Secuencia) y generados mediante **ingeniería inversa** del código fuente (Arquitectura, Clases, Componentes).
 
 ---
 
-## 1. Diagrama de Clases / Estructuras
+## 1. Diagrama de Casos de Uso
+
+A continuación se presentan los Casos de Uso derivados directamente de las Historias de Usuario (HU-01 a HU-06).
+
+```mermaid
+usecaseDiagram
+actor "Desarrollador (Usuario)" as User
+actor "Sistema SafeBridge (Rust Core)" as System
+
+rectangle "Gestión de Backups y Conexiones" {
+  User -- (Gestionar Conexiones DB)
+  (Gestionar Conexiones DB) ..> (Cifrar Credenciales AES) : <<include>>
+  
+  User -- (Probar Conectividad DB)
+  User -- (Generar Volcado Multi-Motor)
+  
+  (Generar Volcado Multi-Motor) ..> (Inyectar Credencial Temporal) : <<include>>
+  (Generar Volcado Multi-Motor) ..> (Emitir Logs en Tiempo Real) : <<include>>
+  
+  System -- (Validar Integridad EOF)
+  System -- (Calcular Hash SHA-256)
+  
+  (Generar Volcado Multi-Motor) <.. (Validar Integridad EOF) : <<extend>>
+  (Generar Volcado Multi-Motor) <.. (Calcular Hash SHA-256) : <<extend>>
+  
+  User -- (Ver Historial y Auditoría)
+}
+```
+
+---
+
+## 2. Diagramas de Secuencia
+
+Estos diagramas representan las interacciones detalladas en los escenarios de prueba del FD03.
+
+### 2.1. Creación Segura de Conexión y Prueba de Red
+
+Este diagrama muestra cómo se transmite una contraseña desde la vista de React y se asegura utilizando AES antes de impactar en SQLite.
+
+```mermaid
+sequenceDiagram
+    actor Usuario
+    participant React as Componente UI<br/>(Connections.tsx)
+    participant Tauri as Rust Command<br/>(connections.rs)
+    participant Crypto as Módulo Crypto<br/>(aes-gcm)
+    participant TCP as TcpStream
+    participant DB as SQLite<br/>(safebridge.db)
+
+    Usuario->>React: Completa formulario y clic "Test Connection"
+    React->>Tauri: test_connection("10.0.0.5", 3306)
+    Tauri->>TCP: TcpStream::connect_timeout()
+    alt Host responde
+        TCP-->>Tauri: Ok(Stream)
+        Tauri-->>React: true
+        React->>Usuario: Muestra "Test Exitoso" en UI
+    else Timeout
+        TCP-->>Tauri: Err(Connection Refused)
+        Tauri-->>React: false
+        React->>Usuario: Muestra "Test Fallido" en UI
+    end
+
+    Usuario->>React: Clic en "Guardar"
+    React->>Tauri: create_connection(ConnectionInfo)
+    Tauri->>Crypto: encrypt_password(conn.password)
+    Crypto-->>Tauri: encrypted_password (Hex)
+    Tauri->>DB: INSERT INTO connections (...) VALUES (...)
+    DB-->>Tauri: Éxito
+    Tauri-->>React: Ok(ID_generado)
+    React->>Usuario: Cierra modal, actualiza lista
+```
+
+### 2.2. Flujo de Generación de Backup y Validación
+
+El proceso más crítico del orquestador, mostrando el ciclo asíncrono y la verificación nativa EOF.
+
+```mermaid
+sequenceDiagram
+    actor Usuario
+    participant React as Panel de Backup<br/>(Backup.tsx)
+    participant Tauri as Rust Command<br/>(generate_backup)
+    participant Crypto as Módulo Crypto
+    participant Shell as tauri_plugin_shell<br/>(Sidecar)
+    participant FS as File System
+    participant DB as SQLite<br/>(backup_logs)
+
+    Usuario->>React: Clic "Generar Backup" (ID: 123)
+    React->>Tauri: invoke("generate_backup", { connection_id })
+    Note over Tauri: Se crea un hilo asíncrono
+    Tauri->>DB: SELECT * FROM connections WHERE id = 123
+    DB-->>Tauri: ConnectionInfo (incluye pass cifrado)
+    Tauri->>Crypto: decrypt_password(encrypted)
+    Crypto-->>Tauri: plain_password
+    Tauri->>React: emit("backup_log", "Iniciando proceso...")
+
+    Tauri->>Shell: sidecar("pg_dump").env("PGPASSWORD", plain_password)
+    Note over Shell: Se genera archivo en disco local
+    Shell-->>Tauri: output (stdout/stderr)
+    Tauri->>React: emit("backup_log", "Volcado generado exitosamente.")
+    
+    Tauri->>FS: calculate_hash_and_size(file_path)
+    loop Lectura en Chunks de 8KB
+        FS-->>Tauri: bytes
+        Tauri->>Tauri: hasher.update(bytes)
+    end
+    Tauri-->>Tauri: SHA-256 resultante
+    Tauri->>React: emit("backup_log", "SHA-256 calculado")
+
+    Tauri->>FS: verify_backup() → SeekFrom::End(-256)
+    FS-->>Tauri: Últimos 256 bytes
+    Tauri->>Tauri: Buscar cadena "PostgreSQL database dump complete"
+    alt Firma presente
+        Tauri->>React: emit("backup_log", "Verificación exitosa")
+        Tauri->>Tauri: verified = true
+    else Firma ausente
+        Tauri->>React: emit("backup_log", "Fallo de validación")
+        Tauri->>Tauri: verified = false
+    end
+
+    Tauri->>DB: INSERT INTO backup_logs (status, hash, verified...)
+    DB-->>Tauri: OK
+    Tauri-->>React: Result(BackupResult)
+    React->>Usuario: Muestra confirmación y detalles visuales (OK/FAIL)
+```
+
+---
+
+## 3. Diagrama de Clases / Estructuras
 
 El siguiente diagrama ilustra cómo las estructuras de datos (Structs) de Rust interactúan y se exponen al frontend como interfaces en TypeScript. Al usar Rust, las "clases" no existen per se, por lo que se representan los `Structs` y sus funciones implícitas (impl blocks) o comandos Tauri asociados.
 
@@ -149,7 +277,7 @@ classDiagram
 
 ---
 
-## 2. Diagrama de Base de Datos
+## 4. Diagrama de Base de Datos
 
 SafeBridge utiliza persistencia local mediante **SQLite** (`rusqlite`) contenida en el archivo `safebridge.db`. El código SQL de creación se encuentra en `src-tauri/src/db.rs`.
 
@@ -189,7 +317,7 @@ erDiagram
 
 ---
 
-## 3. Diagrama de Componentes
+## 5. Diagrama de Componentes
 
 Este diagrama refleja la arquitectura híbrida Tauri, con comunicación IPC entre React y Rust, y Rust interactuando con los binarios del sistema operativo (Sidecars).
 
@@ -265,7 +393,7 @@ graph TB
 
 ---
 
-## 4. Diagrama de Despliegue
+## 6. Diagrama de Despliegue
 
 ```mermaid
 graph LR
@@ -306,7 +434,7 @@ graph LR
 
 ---
 
-## 5. Diagrama de Arquitectura
+## 7. Diagrama de Arquitectura
 
 El proyecto adopta los principios de **Clean Architecture**, aunque al ser una aplicación Tauri pequeña la organización está dictada por módulos. La "interfaz" que divide las capas está impuesta físicamente entre Node.js (Vite) y Rust (Tauri).
 
@@ -346,7 +474,7 @@ graph TD
 
 ---
 
-## 6. Diagrama de Infraestructura (Terraform Cloud)
+## 8. Diagrama de Infraestructura (Terraform Cloud)
 
 > **Contexto:** Aunque el MVP de SafeBridge funciona en local, este diagrama responde al Análisis Económico de Cloud (`FD01-Informe-Factibilidad.md`), ilustrando cómo se puede extender la validación de backups hacia AWS usando Terraform. 
 
@@ -385,4 +513,4 @@ graph TD
 
 ---
 
-*Documento generado por el equipo BitCraft Solutions — Universidad Privada de Tacna, FAING-EPIS, Ciclo 2026-I.*
+*Documento actualizado por el equipo BitCraft Solutions — Universidad Privada de Tacna, FAING-EPIS, Ciclo 2026-I.*

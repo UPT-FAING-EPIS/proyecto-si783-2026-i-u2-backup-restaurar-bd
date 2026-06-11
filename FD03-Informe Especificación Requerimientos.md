@@ -38,7 +38,7 @@ Versión *2.0*
 |:---:|:---|:---|:---|:---|:---|
 | Versión | Hecha por | Revisada por | Aprobada por | Fecha | Motivo |
 | 1.0 | IASR / JSCM | Ing. P. Cuadros | Ing. P. Cuadros | 12/04/2026 | Versión Original |
-| 2.0 | IASR / JSCM | Ing. P. Cuadros | Ing. P. Cuadros | 31/05/2026 | Actualización para Rust MVP Architecture |
+| 2.0 | IASR / JSCM | Ing. P. Cuadros | Ing. P. Cuadros | 11/06/2026 | Actualización de BDD (Dado/Cuando/Entonces) y migración de diagramas a FD04 |
 
 <div style="page-break-after: always; visibility: hidden"></div>
 
@@ -46,8 +46,7 @@ Versión *2.0*
 
 - [1. Historias de Usuario](#1-historias-de-usuario)
 - [2. Criterios de Aceptación](#2-criterios-de-aceptación)
-- [3. Escenarios de Prueba (Gherkin)](#3-escenarios-de-prueba-gherkin)
-- [4. Diagramas de Secuencia](#4-diagramas-de-secuencia)
+- [3. Escenarios de Prueba (BDD)](#3-escenarios-de-prueba-bdd)
 
 <div style="page-break-after: always; visibility: hidden"></div>
 
@@ -70,8 +69,6 @@ Las siguientes historias de usuario han sido derivadas directamente de las funci
 > **quiero** registrar, editar y listar las credenciales de mis servidores de base de datos en una interfaz unificada,  
 > **para** no tener que ingresar contraseñas y parámetros en la terminal repetidamente al momento de requerir un backup.
 
-**Referencia de código**: `src/pages/Connections.tsx` → UI, `src-tauri/src/connections.rs` → `create_connection()`, `list_connections()`.
-
 ---
 
 ### HU-02 — Prueba Rápida de Conectividad a la Base de Datos
@@ -84,8 +81,6 @@ Las siguientes historias de usuario han sido derivadas directamente de las funci
 > **Como** desarrollador que ha configurado un nuevo servidor de base de datos,  
 > **quiero** poder probar la conectividad de red con el host y el puerto directamente desde la aplicación,  
 > **para** asegurarme de que el servidor está alcanzable antes de intentar ejecutar operaciones críticas como un volcado.
-
-**Referencia de código**: `src-tauri/src/connections.rs` → `test_connection()` empleando `TcpStream::connect_timeout`.
 
 ---
 
@@ -100,8 +95,6 @@ Las siguientes historias de usuario han sido derivadas directamente de las funci
 > **quiero** generar archivos de copia de seguridad seleccionando simplemente el motor y la conexión,  
 > **para** que el sistema orqueste automáticamente la ejecución del cliente nativo (`pg_dump`, `mysqldump`, etc.) y me envíe el registro del progreso en tiempo real.
 
-**Referencia de código**: `src-tauri/src/backup.rs` → `generate_backup()`, uso de `app.shell().sidecar()`, y `emit_log_and_record()`.
-
 ---
 
 ### HU-04 — Validación Nativa de Integridad del Archivo
@@ -114,8 +107,6 @@ Las siguientes historias de usuario han sido derivadas directamente de las funci
 > **Como** sistema orquestador de copias de seguridad,  
 > **quiero** calcular el hash SHA-256 del archivo recién generado y leer sus últimos bytes para verificar la firma de conclusión del motor (EOF),  
 > **para** certificar que el archivo resultante no está corrupto ni truncado por una interrupción en el proceso.
-
-**Referencia de código**: `src-tauri/src/backup.rs` → `verify_backup()`, `calculate_hash_and_size()` utilizando `sha2`.
 
 ---
 
@@ -130,8 +121,6 @@ Las siguientes historias de usuario han sido derivadas directamente de las funci
 > **quiero** que mis contraseñas sean encriptadas de forma transparente antes de ser guardadas en disco y nunca expuestas en texto plano en la interfaz,  
 > **para** proteger mi acceso en caso de compromiso físico del archivo de la base de datos local SQLite.
 
-**Referencia de código**: `src-tauri/src/crypto.rs` → `encrypt_password()`, `decrypt_password()`, omitiendo el password en `list_connections()`.
-
 ---
 
 ### HU-06 — Auditoría e Historial de Backups
@@ -145,192 +134,198 @@ Las siguientes historias de usuario han sido derivadas directamente de las funci
 > **quiero** visualizar un historial inmutable de todos los backups generados, indicando tiempos de ejecución, estado y validación,  
 > **para** mantener una auditoría técnica completa sin depender de investigar carpetas del sistema operativo.
 
-**Referencia de código**: `src/pages/History.tsx`, `src-tauri/src/db.rs` → tabla `backup_logs`, `logs.rs` → `list_logs()`.
-
 ---
 
 ## 2. Criterios de Aceptación
 
 ### CA-01 — Gestión y Cifrado de Conexiones
 
-| ID | Criterio | Condición de éxito |
-|:--:|:---------|:-------------------|
-| CA-01-1 | Las contraseñas insertadas se cifran mediante AES-GCM antes del `INSERT` en SQLite | `crypto::encrypt_password(&password)` no falla, el campo en la tabla luce ilegible. |
-| CA-01-2 | El comando `list_connections` no retorna la contraseña en el struct enviado a React | El campo `password` de `ConnectionInfo` se serializa como `null`. |
-| CA-01-3 | El UUID generado es único | No existen conflictos `PRIMARY KEY` en la tabla `connections`. |
+| ID | Criterio |
+|:--:|:---------|
+| CA-01-1 | Las contraseñas insertadas se cifran mediante AES-GCM antes del `INSERT` en SQLite. |
+| CA-01-2 | El comando `list_connections` no retorna la contraseña en el struct enviado a React. |
+| CA-01-3 | El UUID generado es único para cada conexión. |
 
 ### CA-02 — Ejecución del Sidecar (Backup)
 
-| ID | Criterio | Condición de éxito |
-|:--:|:---------|:-------------------|
-| CA-02-1 | El nombre de archivo autogenerado respeta el patrón configurado | Sigue el formato `{database_name}_{timestamp}.{ext}` con la extensión propia del motor. |
-| CA-02-2 | La contraseña se inyecta en variables de entorno o STDIN de forma temporal segura | Se usa `.env("PGPASSWORD", password)` en Tauri Shell, evitando pasar claves legibles a través de argumentos de comando PS (PowerShell). |
-| CA-02-3 | Los logs del proceso se envían al frontend en tiempo real | El evento `backup_log` es emitido continuamente a la ventana de Tauri mediante `emit()`. |
+| ID | Criterio |
+|:--:|:---------|
+| CA-02-1 | El nombre de archivo autogenerado respeta el patrón configurado. |
+| CA-02-2 | La contraseña se inyecta en variables de entorno o STDIN de forma temporal segura. |
+| CA-02-3 | Los logs del proceso se envían al frontend en tiempo real. |
 
 ### CA-03 — Validación de Integridad (EOF)
 
-| ID | Criterio | Condición de éxito |
-|:--:|:---------|:-------------------|
-| CA-03-1 | Archivo de PostgreSQL debe contener firma final correcta | Lectura de los últimos 256 bytes incluye "PostgreSQL database dump complete". |
-| CA-03-2 | Archivo de MySQL debe contener firma final correcta | Lectura de los últimos 256 bytes incluye "Dump completed on". |
-| CA-03-3 | El SHA-256 generado coincide de forma inmutable con el archivo físico | `hex::encode(hasher.finalize())` es almacenado exitosamente en el registro de `BackupResult`. |
+| ID | Criterio |
+|:--:|:---------|
+| CA-03-1 | Archivo de PostgreSQL debe contener firma final correcta en los últimos bytes. |
+| CA-03-2 | Archivo de MySQL debe contener firma final correcta en los últimos bytes. |
+| CA-03-3 | El SHA-256 generado coincide de forma inmutable con el archivo físico y es guardado. |
 
 ---
 
-## 3. Escenarios de Prueba (Gherkin)
+## 3. Escenarios de Prueba (BDD)
 
-### Escenario 1 — Verificación nativa de integridad de un backup exitoso de PostgreSQL
+Se han definido 18 escenarios de prueba (2 por cada Criterio de Aceptación) utilizando el formato formal **Dado... Cuando... Entonces**.
 
+### Criterio: CA-01-1 (Cifrado de Contraseñas)
+
+**Escenario 1: Cifrado exitoso de contraseña válida**
 ```gherkin
-Feature: Validación nativa de terminación (EOF) del archivo de volcado
-  Como motor de orquestación (Rust)
-  Quiero leer los bytes finales de un backup SQL
-  Para verificar que el volcado no terminó de forma abrupta
-
-  Background:
-    Given que el sidecar `pg_dump` ha sido ejecutado
-    And ha producido un archivo "clientes_db_20260531.sql" de 15 MB
-    And el proceso retornó un Exit Status igual a 0
-
-  Scenario: El archivo tiene la firma completa de pg_dump
-    Given la función verify_backup() abre el archivo resultante
-    When el lector de Rust (SeekFrom::End) inspecciona los últimos 256 bytes
-    Then detecta la cadena "PostgreSQL database dump complete" en la memoria del búfer
-    And el resultado devuelto de la verificación es `True`
-    And el log en el dashboard muestra "Verificación exitosa: Se encontró firma de pg_dump válida."
+Dado que el usuario ha ingresado la contraseña "Secreta123" en el formulario de nueva conexión
+Cuando el sistema Rust recibe la petición de guardado
+Entonces la función crypto::encrypt_password convierte la contraseña en un hash AES-GCM
+Y el valor almacenado en la tabla SQLite luce ilegible (hexadecimal).
 ```
 
----
-
-### Escenario 2 — Fallo en conexión y registro auditable del error
-
+**Escenario 2: Fallo intencionado de cifrado por clave de entorno faltante**
 ```gherkin
-Feature: Captura de errores de sidecars
-  Como sistema de orquestación
-  Quiero capturar y registrar un error de los procesos externos
-  Para alertar al usuario y mantener la consistencia del log
-
-  Scenario: Credenciales incorrectas ocasionan fallo del volcado de MySQL
-    Given el usuario posee una conexión "MySQL_PROD" con una contraseña equivocada
-    When el usuario pulsa "Generar Backup" en la interfaz
-    Then el comando Tauri ejecuta `mysqldump` inyectando la clave errónea
-    And `mysqldump` falla arrojando código de error distinto a 0 en el sistema operativo
-    And Rust lee la salida `stderr` arrojando "Access denied for user"
-    And se inserta un registro en la tabla SQLite `backup_logs`
-    And el campo `status` del registro es "FAIL"
-    And el campo `error_message` incluye "Access denied"
+Dado que la llave maestra de cifrado del sistema ha sido corrompida o eliminada
+Cuando el sistema Rust intenta cifrar la contraseña recibida
+Entonces el módulo crypto retorna un Err
+Y la aplicación muestra una alerta crítica indicando "Error interno de cifrado" sin guardar la conexión.
 ```
 
----
+### Criterio: CA-01-2 (Ocultamiento de Contraseñas hacia Frontend)
 
-### Escenario 3 — Test de Conectividad con el Servidor Destino
-
+**Escenario 3: Obtención de lista de conexiones**
 ```gherkin
-Feature: Comprobador de conectividad rápido
-  Como sistema
-  Quiero comprobar si puedo alcanzar la red del motor de base de datos
-  Para prevenir el inicio inútil de comandos de backup.
-
-  Scenario: El host de base de datos se encuentra inactivo
-    Given el usuario ha creado una conexión donde host = "192.168.1.100" y port = 5432
-    And el servidor alojado en esa IP se encuentra apagado
-    When el usuario pulsa el botón "Test de Conexión"
-    And Rust ejecuta `TcpStream::connect_timeout("192.168.1.100:5432")` con un timeout de 3 segundos
-    Then la conexión hace timeout devolviendo un Error (Err)
-    And la interfaz React muestra una alerta "Connection failed" en color rojo
+Dado que el usuario navega a la pantalla "Conexiones"
+Cuando React invoca el comando Tauri list_connections()
+Entonces Rust ejecuta un SELECT en SQLite
+Y el JSON devuelto al frontend tiene el campo "password" establecido en null para todos los registros.
 ```
 
----
-
-## 4. Diagramas de Secuencia
-
-### 4.1. Creación Segura de Conexión y Prueba de Red
-
-Este diagrama muestra cómo se transmite una contraseña desde la vista de React y se asegura utilizando AES antes de impactar en SQLite.
-
-```mermaid
-sequenceDiagram
-    actor Usuario
-    participant React as Componente UI<br/>(Connections.tsx)
-    participant Tauri as Rust Command<br/>(connections.rs)
-    participant Crypto as Módulo Crypto<br/>(aes-gcm)
-    participant TCP as TcpStream
-    participant DB as SQLite<br/>(safebridge.db)
-
-    Usuario->>React: Completa formulario y clic "Test Connection"
-    React->>Tauri: test_connection("10.0.0.5", 3306)
-    Tauri->>TCP: TcpStream::connect_timeout()
-    alt Host responde
-        TCP-->>Tauri: Ok(Stream)
-        Tauri-->>React: true
-        React->>Usuario: Muestra "Test Exitoso" en UI
-    else Timeout
-        TCP-->>Tauri: Err(Connection Refused)
-        Tauri-->>React: false
-        React->>Usuario: Muestra "Test Fallido" en UI
-    end
-
-    Usuario->>React: Clic en "Guardar"
-    React->>Tauri: create_connection(ConnectionInfo)
-    Tauri->>Crypto: encrypt_password(conn.password)
-    Crypto-->>Tauri: encrypted_password (Hex)
-    Tauri->>DB: INSERT INTO connections (...) VALUES (...)
-    DB-->>Tauri: Éxito
-    Tauri-->>React: Ok(ID_generado)
-    React->>Usuario: Cierra modal, actualiza lista
+**Escenario 4: Edición de una conexión existente**
+```gherkin
+Dado que el usuario hace clic en el botón "Editar" de la conexión "DB_Ventas"
+Cuando el modal de edición se abre
+Entonces el campo de contraseña aparece vacío
+Y un texto de ayuda indica "Deje en blanco para mantener la contraseña actual".
 ```
 
----
+### Criterio: CA-01-3 (Unicidad de UUID)
 
-### 4.2. Flujo de Generación de Backup y Validación
+**Escenario 5: Generación estándar de UUID**
+```gherkin
+Dado que el usuario guarda una nueva conexión
+Cuando el backend en Rust prepara el objeto ConnectionInfo
+Entonces se genera un identificador UUIDv4 de 36 caracteres
+Y la base de datos lo acepta como PRIMARY KEY sin conflicto.
+```
 
-El proceso más crítico del orquestador, mostrando el ciclo asíncrono y la verificación nativa EOF.
+**Escenario 6: Prevención de duplicados**
+```gherkin
+Dado que una conexión con el UUID "123e4567-e89b-12d3-a456-426614174000" ya existe
+Cuando una operación de inserción forzada intenta usar el mismo UUID
+Entonces SQLite arroja un error UNIQUE CONSTRAINT
+Y Rust captura el error registrándolo en los logs del sistema operativo.
+```
 
-```mermaid
-sequenceDiagram
-    actor Usuario
-    participant React as Panel de Backup<br/>(Backup.tsx)
-    participant Tauri as Rust Command<br/>(generate_backup)
-    participant Crypto as Módulo Crypto
-    participant Shell as tauri_plugin_shell<br/>(Sidecar)
-    participant FS as File System
-    participant DB as SQLite<br/>(backup_logs)
+### Criterio: CA-02-1 (Patrón de nombre de archivo)
 
-    Usuario->>React: Clic "Generar Backup" (ID: 123)
-    React->>Tauri: invoke("generate_backup", { connection_id })
-    Note over Tauri: Se crea un hilo asíncrono
-    Tauri->>DB: SELECT * FROM connections WHERE id = 123
-    DB-->>Tauri: ConnectionInfo (incluye pass cifrado)
-    Tauri->>Crypto: decrypt_password(encrypted)
-    Crypto-->>Tauri: plain_password
-    Tauri->>React: emit("backup_log", "Iniciando proceso...")
+**Escenario 7: Patrón correcto para PostgreSQL**
+```gherkin
+Dado que el usuario inicia un respaldo para la base de datos "inventario_db" usando PostgreSQL
+Cuando el orquestador prepara la ruta de destino
+Entonces el nombre de archivo generado sigue el formato "inventario_db_YYYYMMDD_HHMMSS.sql"
+Y el archivo se guarda en la ruta por defecto del usuario.
+```
 
-    Tauri->>Shell: sidecar("pg_dump").env("PGPASSWORD", plain_password)
-    Note over Shell: Se genera archivo en disco local
-    Shell-->>Tauri: output (stdout/stderr)
-    Tauri->>React: emit("backup_log", "Volcado generado exitosamente.")
-    
-    Tauri->>FS: calculate_hash_and_size(file_path)
-    loop Lectura en Chunks de 8KB
-        FS-->>Tauri: bytes
-        Tauri->>Tauri: hasher.update(bytes)
-    end
-    Tauri-->>Tauri: SHA-256 resultante
-    Tauri->>React: emit("backup_log", "SHA-256 calculado")
+**Escenario 8: Patrón correcto para MongoDB**
+```gherkin
+Dado que el usuario inicia un respaldo para la base de datos "nosql_data" usando MongoDB
+Cuando el orquestador prepara la ruta de destino
+Entonces el nombre de archivo generado sigue el formato "nosql_data_YYYYMMDD_HHMMSS.archive"
+Y la extensión corresponde correctamente a mongodump.
+```
 
-    Tauri->>FS: verify_backup() → SeekFrom::End(-256)
-    FS-->>Tauri: Últimos 256 bytes
-    Tauri->>Tauri: Buscar cadena "PostgreSQL database dump complete"
-    alt Firma presente
-        Tauri->>React: emit("backup_log", "Verificación exitosa")
-        Tauri->>Tauri: verified = true
-    else Firma ausente
-        Tauri->>React: emit("backup_log", "Fallo de validación")
-        Tauri->>Tauri: verified = false
-    end
+### Criterio: CA-02-2 (Inyección Segura de Contraseña)
 
-    Tauri->>DB: INSERT INTO backup_logs (status, hash, verified...)
-    DB-->>Tauri: OK
-    Tauri-->>React: Result(BackupResult)
-    React->>Usuario: Muestra confirmación y detalles visuales (OK/FAIL)
+**Escenario 9: Inyección en PostgreSQL vía variable de entorno**
+```gherkin
+Dado que el proceso de backup para PostgreSQL está a punto de iniciar
+Cuando Rust instancia el sidecar "pg_dump"
+Entonces inyecta la contraseña descifrada exclusivamente en la variable de entorno temporal "PGPASSWORD"
+Y el proceso nativo se ejecuta sin exponer la clave en los argumentos de PowerShell.
+```
+
+**Escenario 10: Limpieza automática del proceso**
+```gherkin
+Dado que el volcado de la base de datos ha concluido exitosamente
+Cuando el proceso hijo (sidecar) es destruido por el orquestador Tauri
+Entonces la variable de entorno temporal "PGPASSWORD" desaparece de la memoria del sistema
+Y no quedan rastros legibles de la contraseña en la memoria RAM compartida.
+```
+
+### Criterio: CA-02-3 (Emisión de Logs en Tiempo Real)
+
+**Escenario 11: Emisión de logs estándar (Stdout)**
+```gherkin
+Dado que el comando de respaldo está corriendo
+Cuando el motor de base de datos envía un progreso de "Respaldando tabla clientes (10%)"
+Entonces Rust lee el stdout del sidecar
+Y emite un evento "backup_log" a la ventana principal de React para que el usuario lo visualice de inmediato.
+```
+
+**Escenario 12: Emisión de errores (Stderr)**
+```gherkin
+Dado que ocurre una interrupción de red durante el respaldo
+Cuando el motor de base de datos emite un mensaje de error fatal por Stderr
+Entonces Rust captura esta cadena
+Y la emite hacia React con una etiqueta roja indicando nivel de "ERROR".
+```
+
+### Criterio: CA-03-1 (Firma EOF en PostgreSQL)
+
+**Escenario 13: Validación exitosa de pg_dump**
+```gherkin
+Dado que el archivo de respaldo de PostgreSQL ha sido generado en disco
+Cuando la función verify_backup() inspecciona los últimos 256 bytes usando SeekFrom::End
+Entonces encuentra la cadena "PostgreSQL database dump complete"
+Y marca la bandera "verified" del backup_log como True.
+```
+
+**Escenario 14: Detección de archivo corrupto de PostgreSQL**
+```gherkin
+Dado que el usuario detuvo abruptamente la computadora a mitad del respaldo
+Cuando la función verify_backup() inspecciona el archivo incompleto en el siguiente arranque
+Entonces no logra encontrar la cadena "PostgreSQL database dump complete"
+Y marca la bandera "verified" como False.
+```
+
+### Criterio: CA-03-2 (Firma EOF en MySQL)
+
+**Escenario 15: Validación exitosa de mysqldump**
+```gherkin
+Dado que el archivo de respaldo de MySQL ha sido generado en disco
+Cuando la función verify_backup() inspecciona los últimos 256 bytes
+Entonces encuentra la cadena "Dump completed on" seguida de la fecha
+Y marca la bandera "verified" del backup_log como True en la auditoría.
+```
+
+**Escenario 16: Archivo vacío por falta de permisos en MySQL**
+```gherkin
+Dado que el usuario no tiene permisos LOCK TABLES en MySQL
+Cuando el archivo generado pesa 0 bytes
+Entonces verify_backup() detecta el archivo anómalo
+Y retorna un error de validación inmediato indicando "Archivo vacío o corrupto".
+```
+
+### Criterio: CA-03-3 (Generación inmutable de SHA-256)
+
+**Escenario 17: Cálculo correcto en archivos grandes**
+```gherkin
+Dado que se ha completado un respaldo exitoso de 5 GB
+Cuando el orquestador invoca la función calculate_hash_and_size
+Entonces lee el archivo por bloques (chunks) de 8KB de manera eficiente
+Y devuelve una cadena hexadecimal de 64 caracteres correspondiente al SHA-256.
+```
+
+**Escenario 18: Persistencia del Hash para auditoría**
+```gherkin
+Dado que el SHA-256 ha sido calculado tras la verificación
+Cuando el ciclo de orquestación termina
+Entonces se realiza un INSERT final en la tabla backup_logs
+Y el valor del SHA-256 se guarda permanentemente para futuras comprobaciones de integridad.
 ```
