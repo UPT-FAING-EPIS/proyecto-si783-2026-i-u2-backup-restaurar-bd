@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="./Informes/media/logo-upt.png" alt="Logo UPT" width="150" />
-
 # SafeBridge Project
 **Orquestador Multi-Motor de Respaldos y Validación de Integridad**
 
