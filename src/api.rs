@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -9,7 +9,7 @@ use chrono::Local;
 use uuid::Uuid;
 
 use crate::models::{
-    TaskStatusResponse, ValidationReport, ValidationRequest,
+    TaskStatusResponse, ValidationReport,
 };
 use crate::sandbox;
 use crate::AppState;
@@ -20,48 +20,96 @@ use crate::AppState;
 
 /// Recibe un backup o script, crea una tarea de validación y lanza el sandbox
 /// de forma asíncrona. Responde inmediatamente con un task_id.
+#[axum::debug_handler]
 pub async fn run_validation(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<ValidationRequest>,
+    mut multipart: Multipart,
 ) -> impl IntoResponse {
-    // Generar un ID único para la tarea
     let task_id = Uuid::new_v4().to_string();
     let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
+    let mut engine = String::new();
+    let mut database_name: Option<String> = None;
+    let mut temp_file_path = String::new();
+
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let name = field.name().unwrap_or("").to_string();
+        
+        if name == "engine" {
+            if let Ok(text) = field.text().await {
+                engine = text;
+            }
+        } else if name == "database_name" {
+            if let Ok(text) = field.text().await {
+                if !text.is_empty() {
+                    database_name = Some(text);
+                }
+            }
+        } else if name == "file" {
+            let file_name = field.file_name().unwrap_or("backup.sql").to_string();
+            let safe_file_name = file_name.replace(|c: char| !c.is_ascii_alphanumeric() && c != '.', "_");
+            
+            let temp_dir = std::env::temp_dir();
+            let file_path = temp_dir.join(format!("{}_{}", task_id, safe_file_name));
+            
+            if let Ok(data) = field.bytes().await {
+                if let Err(e) = tokio::fs::write(&file_path, &data).await {
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(serde_json::json!({
+                            "error": format!("Error al guardar archivo temporal: {}", e)
+                        })),
+                    );
+                }
+                temp_file_path = file_path.to_string_lossy().to_string();
+            }
+        }
+    }
+
+    if engine.is_empty() || temp_file_path.is_empty() {
+        if !temp_file_path.is_empty() {
+            let _ = tokio::fs::remove_file(&temp_file_path).await;
+        }
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Los campos 'engine' y 'file' son requeridos."
+            })),
+        );
+    }
+
     // Registrar la tarea en la base de datos con estado "queued"
-    {
+    let db_result = {
         let db = state.db.lock().unwrap();
-        let result = db.execute(
+        db.execute(
             "INSERT INTO validation_tasks (task_id, status, backup_path, engine, database_name, created_at)
              VALUES (?1, 'queued', ?2, ?3, ?4, ?5)",
             (
                 &task_id,
-                &payload.backup_path,
-                &payload.engine,
-                &payload.database_name,
+                &temp_file_path,
+                &engine,
+                &database_name,
                 &now,
             ),
-        );
+        )
+    };
 
-        if let Err(e) = result {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": format!("Error al registrar la tarea: {}", e)
-                })),
-            );
-        }
+    if let Err(e) = db_result {
+        let _ = tokio::fs::remove_file(&temp_file_path).await;
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": format!("Error al registrar la tarea: {}", e)
+            })),
+        );
     }
 
     // Lanzar el proceso de validación de forma asíncrona (no bloqueante)
     let state_clone = Arc::clone(&state);
     let tid = task_id.clone();
-    let bp = payload.backup_path.clone();
-    let eng = payload.engine.clone();
-    let db_name = payload.database_name.clone();
 
     tokio::spawn(async move {
-        sandbox::run_validation(state_clone, tid, bp, eng, db_name).await;
+        sandbox::run_validation(state_clone, tid, temp_file_path, engine, database_name, true).await;
     });
 
     // Responder inmediatamente al cliente

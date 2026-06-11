@@ -50,7 +50,7 @@ fn restore_command(engine: &str, container_id: &str, backup_path: &str) -> Resul
 
 /// Ejecuta el flujo completo de validación en sandbox.
 /// Esta función se ejecuta de forma asíncrona vía tokio::spawn.
-pub async fn run_validation(state: Arc<AppState>, task_id: String, backup_path: String, engine: String, _database_name: Option<String>) {
+pub async fn run_validation(state: Arc<AppState>, task_id: String, backup_path: String, engine: String, _database_name: Option<String>, is_temp_file: bool) {
     let mut logs: Vec<String> = Vec::new();
     let start = Local::now();
 
@@ -171,6 +171,15 @@ pub async fn run_validation(state: Arc<AppState>, task_id: String, backup_path: 
 
     // 10. Limpiar: destruir el contenedor
     cleanup_container(&container_id, &mut logs);
+
+    if is_temp_file {
+        log_msg(&mut logs, "Eliminando archivo de backup temporal...");
+        if let Err(e) = std::fs::remove_file(&backup_path) {
+            log_msg(&mut logs, &format!("Advertencia: no se pudo eliminar el archivo temporal: {}", e));
+        } else {
+            log_msg(&mut logs, "Archivo temporal eliminado exitosamente.");
+        }
+    }
 
     // 11. Generar el reporte final
     let end = Local::now();

@@ -10,7 +10,8 @@ dist/
 dist-ssr/
 build/
 
-# ── Rust / Tauri ──────────────────────────────────
+# ── Rust / Backend ──────────────────────────────────
+/target/
 src-tauri/target/
 src-tauri/gen/schemas/
 
